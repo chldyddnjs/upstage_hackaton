@@ -15,17 +15,15 @@ predibase_llm = PredibaseLLM(
 # (see https://docs.predibase.com/user-guide/inference/models for the catalog).
 # You can also optionally specify a fine-tuned adapter that's hosted on Predibase or HuggingFace
 # In the case of Predibase-hosted adapters, you must also specify the adapter_version
-question = "무공훈장 수여를 받으려면 어떻게 해야하지?"
+question = "건강기능식품을 먹고 부작용이 일어났어요. 보상을 받고 싶은데 어떻게 해야할까요?, 법적인 조언을 주세요."
+
 template = f"""
+건강기능식품에 관한 법률 시행령 ( 약칭: 건강기능식품법 시행령 
+
+제1조(목적) 이 영은 「건강기능식품에 관한 법률」에서 위임된 사항과 그 시행에 관하여 필요한 사항을 규정함을 목적
+으로 한다
 
 질문: {question}
-
-아래와 같은 구조로 질문에 대한 답변을 한다.
-
-- (1) 사실관계(법 적용과 관련 된 내용을 담은 사건개요 간략히 설명) :
-- (2) 관련 법률의 일반 내용 :
-- (3) 사실관계의 적용 :
-- (4) 결론(요약) :
 """
 
 result = predibase_llm.complete(template)

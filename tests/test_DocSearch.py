@@ -39,7 +39,7 @@ def test_docsearch():
             weights_for_different_modes=[0.4, 0.2, 0.4]
             )# weights_for_different_modes(w) is used to do weighted sum: w[0]*dense_score + w[1]*sparse_score + w[2]*colbert_score
         
-        data = dict(smilarlity=result['colbert'],doc=documents,question=question)
+        data = dict(similarity=result['colbert'],documents=documents,question=question)
         with open(output_path,'a') as f:
             json.dump(data,f,indent=4,ensure_ascii=False)
 if __name__=="__main__":

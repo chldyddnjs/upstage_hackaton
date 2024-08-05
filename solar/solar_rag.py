@@ -32,6 +32,7 @@ else:
     index = load_index_from_storage(storage_context)
 
 Settings.embed_model = resolve_embed_model("local:BAAI/bge-m3")
+Settings.chunk_size = 512
 
 predibase_llm = PredibaseLLM(
     model_name="solar-1-mini-chat-240612", 
@@ -46,12 +47,9 @@ retriever = index.as_retriever(
 )
 
 
-question = "무공훈장"
+question = "착오송금으로 하동군법원에 부당이득금 반환 소송을 진행하여 2021년 2월 2일 지급판결을 받았습니다. 그런데 피고는 주민등록 말소 상태이며, 연락이 되지 않는 상황입니다. 현재 착오송금된 계좌에서 어떻게 반환을 받을 수 있는지 상당을 청합니다."
 template = f"""
-
-질문: {question}
-
-질문과 관련된 법률을 찾아줘
+{question}
 """
 
 nodes = retriever.retrieve(
