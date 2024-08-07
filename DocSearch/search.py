@@ -1,64 +1,107 @@
+import warnings
 import os
-import argparse
-import json
-from DocSearch.BaseModel import bge
-from datasets import load_dataset
-from multiprocessing import Pool,cpu_count
-from functools import partial
-from tqdm import tqdm
+import torch
+import pandas as pd
+import numpy as np
+from utils import setup_args
+from datasets import load_dataset,load_from_disk
+from transformers import AutoTokenizer, AutoModel
 
-def one_hot(scores:list):
-        MAX = 0
-        MAX_i = 0
-        for i,score in enumerate(scores):
-            if MAX < score:
-                MAX = score
-                MAX_i = i
-        return MAX_i,MAX       
+warnings.filterwarnings("ignore")
 
-def search(document,question,threshold):
+"""
+I applied the pooling method for each model(e.g. sentence transformer, bge , etc ...)
+https://www.linkedin.com/posts/prithivirajdamodaran_cls-vs-mean-pooling-is-case-by-case-activity-7127905094477496320-orXv/
 
-    res = []
-    sentence_pairs = [question,document]
-    model = bge("BAAI/bge-m3").model
-    scores = model.compute_score(
-        sentence_pairs=sentence_pairs,
-        max_passage_length=128,
-        weights_for_different_modes=[0.4, 0.2, 0.4]
-    )
-    return dict(scores=scores,documents=sentence_pairs)
-    # idx, _max = one_hot(scores['colbert'])
-    # if threshold < _max:
-    #     res.append((idx, _max))
-    #     data = dict(similarity=scores['colbert'], documents=documents, question=question_list)
-    #     if args.debug:
-    #         print(json.dumps(data, indent=4, ensure_ascii=False))
+"""
 
-def search_parallel(args):
-    engine = partial(search,question=args.question,threshold=args.threshold)
-    with Pool(processes=3) as pool:
-        results = pool.map(engine,tqdm(args.ds))
+def mean_pooling(model_output, attention_mask):
+    token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+
+def cls_pooling(model_output):
+    return model_output.last_hidden_state[:, 0]
+
+def get_embeddings(model,pool_type,tokenizer,texts,device):
+    encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors="pt")
+    encoded_input = {k: v.to(device) for k, v in encoded_input.items()}
+    model_output = model(**encoded_input)
+
+    pooling_funcs = {
+        "mean": lambda: mean_pooling(model_output, encoded_input["attention_mask"]),
+        "cls": lambda: cls_pooling(model_output)
+    }
     
-    with open(args.output_path,'a') as f:
-        json.dump(results,f,indent=4,ensure_ascii=False)
-
+    pooling_func = pooling_funcs.get(pool_type, None)
     
-def setup_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-q","--question",type=str,required=True)
-    parser.add_argument("-m","--model_name",type=str,default="BAAI/bge-m3")
-    parser.add_argument("-o","--output_path",type=str,default="output/qa_score.jsonl")
-    parser.add_argument("-d","--data_files",type=str,default="legal.jsonl")
-    parser.add_argument("-t","--threshold",type=float,default="0.3")
-    return parser.parse_args()
+    return pooling_func()
 
-def main(args):
-    ds = load_dataset('json',data_files=args.data_files,split="train",num_proc=os.cpu_count()-2)
-    args.ds = ds['title']
-    # print(args.ds)
-    # args.model = bge(args.model_name)
-    search_parallel(args)
+def doc_retriver(args):
+    
+    device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
 
+    ds = load_dataset('json',data_files=args.data_files,split="train",num_proc=os.cpu_count()-1)
+    tokenizer = AutoTokenizer.from_pretrained(args.name_or_path)
+    model = AutoModel.from_pretrained(args.name_or_path)
+    path = f"output/embeddings_{args.name_or_path}_{args.field}_{args.pool_type}"
+
+    if not os.path.exists(path):
+        print("Creating embeddings ...")
+        embeddings_ds = ds.map(
+            lambda x: {"embeddings": get_embeddings(model,args.pool_type,tokenizer,x[args.field],device).detach().cpu().numpy()[0]}
+        )
+        embeddings_ds.save_to_disk(path)
+        embeddings_ds.add_faiss_index(column="embeddings")
+        embeddings_ds.save_faiss_index('embeddings',f'{path}_index.faiss')
+
+    else:
+        print("Loading embeddings ...")
+        embeddings_ds = load_from_disk(path)
+        embeddings_ds.load_faiss_index('embeddings',f'{path}_index.faiss')
+    
+    question_embedding = get_embeddings(model,args.pool_type,tokenizer,[args.question],device).cpu().detach().numpy()
+
+    texts = []
+    
+    if args.similarity == "cosin":
+        """
+        Somthing errors are remained, so Don't use this method 
+        """
+        scores = np.array(question_embedding) @ np.array(embeddings_ds['embeddings']).T
+        sorted_scores = np.sort(scores)
+        top_k_scores = sorted_scores[args.top_k:]
+        indices = np.where(scores[0] >= top_k_scores[0][0])
+
+        print("Similarity -> cosin")
+        for i in indices[0]:
+            print("TITLE : ",embeddings_ds['title'][int(i)])
+            print("SCORE : ",scores[0][i])
+            print("=" * 50)
+            print()
+
+        for idx in indices:
+            filtered_ds = ds.filter(lambda example: example[args.field].startswith(f"{embeddings_ds['title'][idx]}")) 
+            texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
+
+    if args.similarity == "nearest":
+        print("Nearest -> distance")
+        scores, samples = embeddings_ds.get_nearest_examples("embeddings", question_embedding, k=args.top_k)
+
+        samples_df = pd.DataFrame.from_dict(samples)
+        samples_df["scores"] = scores
+        samples_df.sort_values("scores", ascending=False, inplace=True)
+
+        for _, row in samples_df.iterrows():
+            print(f"TITLE: {row.title}")
+            print(f"SCORE: {row.scores}")
+            print("=" * 50)
+            print()
+            
+        filtered_ds = ds.filter(lambda example: example[args.field].startswith(f"{row.title}")) 
+        texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
+    return texts
 if __name__=="__main__":
     args = setup_args()
-    main(args)
+    doc_retriver(args)

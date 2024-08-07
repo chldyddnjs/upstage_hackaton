@@ -1,10 +1,9 @@
 import os
 import PyPDF2
-import argparse
 import json
 import re
+from ..utils import setup_args
 from tqdm import tqdm
-import multiprocessing as mp
 
 def clean(text):
     pattern = r"[^ㄱ-ㅎ가-힣0-9\n\.]"
@@ -33,13 +32,6 @@ def extract_text_from_pdf(pdf_file_path):
         text = '\n'.join(full_text.split("\n")[3:4] + full_text.split("\n")[6:])
 
     return  dict(title=clean(title).strip(), text=clean(text).strip())
-    
-
-def setup_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-r','--roots', nargs='+', help='<Required> Set flag', required=True)
-    parser.add_argument('-o','--output_file',default="legal.json",type=str)
-    return parser.parse_args()
 
 def main(args):
     #["11111","22222","33333","4444","55555","66666"]

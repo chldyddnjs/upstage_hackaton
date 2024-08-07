@@ -1,28 +1,18 @@
 import os
-import re
 import openai
-import time
 from dotenv import load_dotenv
 from llama_index.core import (
-    VectorStoreIndex, 
     SimpleDirectoryReader, 
-    StorageContext, 
-    load_index_from_storage,
+    StorageContext,
+    KnowledgeGraphIndex,
     Settings,
-    PropertyGraphIndex,
-    ServiceContext,
 )
 from llama_index.core.graph_stores import SimpleGraphStore
 from llama_index.core.embeddings import resolve_embed_model
 from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core import KnowledgeGraphIndex
 from pyvis.network import Network
 from llama_index.llms.predibase import PredibaseLLM
-from GraphRAG import (
-    GraphRAGStore,
-    GraphRAGExtractor,
-    GraphRAGQueryEngine
-)
+
 load_dotenv(verbose=True)
 os.environ["PREDIBASE_API_TOKEN"] = os.getenv('PREDIBASE_API_TOKEN')
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
@@ -35,7 +25,7 @@ llm = PredibaseLLM(
 
 Settings.llm = llm
 Settings.embed_model = resolve_embed_model("local:BAAI/bge-m3")
-Settings.chunk_size = 512
+Settings.chunk_size = 128
 
 documents = SimpleDirectoryReader("./data").load_data()
 
@@ -52,11 +42,11 @@ index = KnowledgeGraphIndex.from_documents(
 
 query = "What is ESOP?"
 query_engine = index.as_query_engine(include_text=True,
-                                     response_mode ="tree_summarize",
-                                     embedding_mode="hybrid",
-                                     similarity_top_k=5,)
+                                    response_mode ="tree_summarize",
+                                    embedding_mode="hybrid",
+                                    similarity_top_k=5)
 #
-message_template =f"""법원보관금취급규칙이란?"""
+message_template =f"""건설기계관리법에 대해서 알려줘"""
 #
 response = query_engine.query(message_template)
 #

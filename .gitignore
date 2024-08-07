@@ -3,3 +3,4 @@ output/*
 legal*
 document_*
 .env
+storage

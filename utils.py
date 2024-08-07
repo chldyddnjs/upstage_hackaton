@@ -1,0 +1,15 @@
+import argparse
+def setup_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f","--field",type=str,default="title",help="Select the text field in the huggingface dataset")
+    parser.add_argument("-d","--data_files",type=str,default="./data/legal.jsonl")
+    parser.add_argument("-q","--question",type=str,default="건설기계관리법",help="This is relative to the input for the docments search")
+    parser.add_argument("-k","--top_k",type=str,default=5,help="Remain to be the k-th number in the scores")
+    parser.add_argument("--chunk_size",type=int,default=128)
+    parser.add_argument("--chunk_overlap",type=int,default=20)
+    parser.add_argument("--name_or_path",type=str,default="bespin-global/klue-sroberta-base-continue-learning-by-mnr",help="huggingface model name or path")
+    parser.add_argument("--pool_type",type=str,default="cls",help="Select the pooling method")
+    parser.add_argument("-s","--similarity",type=str,default="nearest")
+    parser.add_argument('-r','--roots', nargs='+', help='dir list for preprocessing',default="./data/11111,./data/22222,./data/33333,./data/4444,./data/55555,./data/66666")
+    parser.add_argument('-o','--output_file',default="legal.json",type=str)
+    return parser.parse_args()

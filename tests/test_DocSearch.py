@@ -1,4 +1,4 @@
-from DocSearch.BaseModel import bge
+from codes.upstage_hackaton.DocSearch.bge_m3 import bge
 from datasets import load_dataset
 import os
 import json
