@@ -5,3 +5,4 @@ document_*
 .env
 storage
 __pycache__
+.empty

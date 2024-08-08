@@ -72,5 +72,6 @@ def run(args):
 
 if __name__=="__main__":
     args = setup_args()
-    args.llm = load_solar_mini
+    args.llm = load_solar_mini()
+    args.embed_model = load_embed_model_hf(args.name_or_path)
     run(args)
