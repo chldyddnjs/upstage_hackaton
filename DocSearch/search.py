@@ -80,7 +80,6 @@ def doc_retriver(args):
             print()
 
         filtered_ds = ds.select(list(indices[0]))
-        print(filtered_ds)
         texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
 
     if args.similarity == "nearest":

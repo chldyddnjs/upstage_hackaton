@@ -4,3 +4,4 @@ legal*
 document_*
 .env
 storage
+__pycache__
