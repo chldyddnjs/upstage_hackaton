@@ -66,13 +66,11 @@ def doc_retriver(args):
     texts = []
     
     if args.similarity == "cosin":
-        """
-        Somthing errors are remained, so Don't use this method 
-        """
+
         scores = np.array(question_embedding) @ np.array(embeddings_ds['embeddings']).T
-        sorted_scores = np.sort(scores)
-        top_k_scores = sorted_scores[args.top_k:]
-        indices = np.where(scores[0] >= top_k_scores[0][0])
+        sorted_scores = np.sort(scores).reshape(-1)
+        top_k_scores = sorted_scores[-args.top_k:].reshape(-1)
+        indices = np.where(scores[0] >= top_k_scores[0])
 
         print("Similarity -> cosin")
         for i in indices[0]:
@@ -81,13 +79,14 @@ def doc_retriver(args):
             print("=" * 50)
             print()
 
-        for idx in indices:
-            filtered_ds = ds.filter(lambda example: example[args.field].startswith(f"{embeddings_ds['title'][idx]}")) 
-            texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
+        filtered_ds = ds.select(list(indices[0]))
+        print(filtered_ds)
+        texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
 
     if args.similarity == "nearest":
         print("Nearest -> distance")
         scores, samples = embeddings_ds.get_nearest_examples("embeddings", question_embedding, k=args.top_k)
+
 
         samples_df = pd.DataFrame.from_dict(samples)
         samples_df["scores"] = scores
@@ -99,7 +98,7 @@ def doc_retriver(args):
             print("=" * 50)
             print()
             
-        filtered_ds = ds.filter(lambda example: example[args.field].startswith(f"{row.title}")) 
+        filtered_ds = ds.filter(lambda example: example['title'] in samples['title'])
         texts.append(dict(title=filtered_ds['title'],text=filtered_ds['text']))
     return texts
 if __name__=="__main__":
