@@ -1,9 +1,15 @@
-
-# example 
+# Installation
     1. git clone
     2. pip install -e .
     3. pip install requirements.txt
-    4. python -m solar.solar_rag -q """ 안녕하세요. 저는 주택임대(소형아파트)하고 암차인으로 부터 소액의 월세를 받고 있습니다. 
+    
+# preprocessing
+    1. 법률 pdf 파일이 담긴 디렉토리를 준비한다.
+    2. 전처리를 진행한다. 
+        - python preprocess.pdf_to_json -r /path_to_your_file/
+    
+# example 
+    1. python -m solar.solar_rag -q """ 안녕하세요. 저는 주택임대(소형아파트)하고 암차인으로 부터 소액의 월세를 받고 있습니다. 
        만약에 계약이 만료되기전 임차인이 갱신요구권을 사용하겠다면 예외조건에 해당이 안되며 임대인은 요청을 받아들여야 되는걸로 알고 있습니다.                       
        그런데 만약 기존 임대차 계약조건이 아니고 암처안 오히려 월세를 낮추어서 갱신요구를 하는 경우 이런 경우는 임대인이 거절하고 계약해지 하면 되나요? 
        일반적으로 임대인이 인상을 요구하다 보니 5% 상향한도가 있고 하는데 반대로 임차인이 낮추어 요구하면은요?
