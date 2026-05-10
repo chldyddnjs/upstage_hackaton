@@ -1,3 +1,17 @@
+# ⚖️ 법률 문서 RAG 시스템
+
+> Upstage 해커톤 | 2024.08 ~ 09
+
+## 프로젝트 개요
+법률 PDF 문서를 기반으로 한 RAG(Retrieval-Augmented Generation) 시스템입니다.
+주택임대차, 계약 등 법률 관련 질의에 정확한 답변을 제공합니다.
+
+## 시스템 구조
+법률 PDF → 전처리(JSON 변환) → Solar LLM → RAG 파이프라인 → 질의응답
+
+## 기술 스택
+Python, Solar LLM, RAG, PDF 전처리
+
 # Installation
     1. git clone
     2. pip install -e .
